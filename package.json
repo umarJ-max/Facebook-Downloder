@@ -1,0 +1,9 @@
+{
+  "name": "fb-downloader",
+  "version": "1.0.0",
+  "description": "Facebook Video Downloader",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  }
+}
