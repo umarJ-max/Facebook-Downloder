@@ -6,34 +6,65 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { url } = req.body;
-  if (!url || !url.includes("facebook.com") && !url.includes("fb.watch") && !url.includes("fb.com")) {
+  const { url, k } = req.body;
+
+  // ── Mode 2: convert (get final download link) ──
+  if (k) {
+    try {
+      const convertRes = await fetch("https://www.y2mate.com/mates/convertV2/index", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Referer: "https://www.y2mate.com/",
+        },
+        body: new URLSearchParams({ vid: "", k }).toString(),
+      });
+      const data = await convertRes.json();
+      if (data?.dlink) {
+        return res.status(200).json({ dlink: data.dlink });
+      }
+      return res.status(500).json({ error: "Could not get download link. Try again." });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Convert failed. Please try again." });
+    }
+  }
+
+  // ── Mode 1: analyze (get qualities list) ──
+  if (!url) {
+    return res.status(400).json({ error: "Please provide a Facebook video URL." });
+  }
+
+  const isValidUrl =
+    url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com");
+
+  if (!isValidUrl) {
     return res.status(400).json({ error: "Please provide a valid Facebook video URL." });
   }
 
   try {
-    const apiUrl = `https://www.y2mate.com/mates/analyzeV2/ajax`;
-    const formData = new URLSearchParams({
-      k_query: url,
-      k_page: "Facebook",
-      hl: "en",
-      q_auto: 0,
-    });
-
-    const analyzeRes = await fetch(apiUrl, {
+    const analyzeRes = await fetch("https://www.y2mate.com/mates/analyzeV2/ajax", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         Referer: "https://www.y2mate.com/",
       },
-      body: formData.toString(),
+      body: new URLSearchParams({
+        k_query: url,
+        k_page: "Facebook",
+        hl: "en",
+        q_auto: 0,
+      }).toString(),
     });
 
     const data = await analyzeRes.json();
 
     if (!data || data.status !== "ok") {
-      return res.status(500).json({ error: "Could not extract video. The video may be private or unavailable." });
+      return res.status(500).json({
+        error: "Could not extract video. It may be private or region-restricted.",
+      });
     }
 
     const links = data.links?.mp4 || data.links?.video || {};
@@ -44,7 +75,9 @@ export default async function handler(req, res) {
     }));
 
     if (!qualities.length) {
-      return res.status(404).json({ error: "No downloadable formats found. The video may be private." });
+      return res.status(404).json({
+        error: "No downloadable formats found. The video may be private.",
+      });
     }
 
     return res.status(200).json({
