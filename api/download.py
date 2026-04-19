@@ -51,7 +51,11 @@ def get_video_info(url):
             continue
         seen.add(label)
         fsize = f.get("filesize") or f.get("filesize_approx")
-        size_str = f"{round(fsize / 1048576, 1)} MB" if fsize else "Unknown"
+        size_str = f"{round(fsize / 1048576, 1)} MB" if fsize else "MP4 Video"
+        vcodec = f.get("vcodec", "")
+        tbr = f.get("tbr")
+        if tbr:
+            size_str = f"{round(tbr)} kbps"
         qualities.append({
             "quality": label,
             "size": size_str,
