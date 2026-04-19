@@ -522,10 +522,12 @@
       .features { grid-template-columns: 1fr 1fr; padding: 0 12px; }
       .feat:last-child { grid-column: span 2; }
       .how-section { padding: 0 12px; }
-      .input-wrap { flex-direction: column; }
-      .btn-download { width: 100%; justify-content: center; }
+      .input-wrap { flex-direction: column; gap: 8px; }
+      .url-input { width: 100%; min-height: 50px; font-size: 15px; }
+      .btn-download { width: 100%; justify-content: center; height: 50px; }
       .result-meta { flex-direction: column; }
       .result-thumb, .thumb-placeholder { width: 100%; height: 160px; }
+      .paste-hint { flex-wrap: wrap; }
     }
   </style>
 </head>
@@ -733,22 +735,22 @@
 
   async function getDownload(k, quality) {
     try {
-      const res = await fetch('https://www.y2mate.com/mates/convertV2/index', {
+      const res = await fetch('/api/download', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Referer': 'https://www.y2mate.com/'
-        },
-        body: new URLSearchParams({ vid: '', k })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ k })
       });
       const data = await res.json();
       if (data.dlink) {
         const a = document.createElement('a');
         a.href = data.dlink;
-        a.download = `facebook-video-${quality}.mp4`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       } else {
-        alert('Download link expired or unavailable. Please try fetching again.');
+        alert(data.error || 'Download link unavailable. Please try again.');
       }
     } catch (e) {
       alert('Failed to get download link. Please try again.');
